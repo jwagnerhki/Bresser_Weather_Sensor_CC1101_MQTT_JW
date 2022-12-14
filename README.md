@@ -1,11 +1,11 @@
-> :warning: This repository is deprecated and no longer maintained. 
-> The recommended alternative is [BresserWeatherSensorReceiver](https://github.com/matthias-bs/BresserWeatherSensorReceiver)
-> which provides a much cleaner design and allows to use an SX1276 or RFM95W radio receiver as an alternative to the CC1101.
-> Please refer to the [BresserWeatherSensorMQTT](https://github.com/matthias-bs/BresserWeatherSensorReceiver/tree/main/examples/BresserWeatherSensorMQTT) example.
+> Based on [BresserWeatherSensorReceiver](https://github.com/matthias-bs/Bresser_Weather_Sensor_CC1101_MQTT)
+> which is deprecated according to the author.
+> This fork removes a lot of functionality (drops Secure MQTT, deep sleep requiring extra wiring for interrupt),
+> while improving the basic functionality and code. Adds a HTTP status page. Uses C1101 interrupt-based reception.
 
 # Bresser_Weather_Sensor_CC1101_MQTT
 
-**Bresser 5-in-1/6-in-1 868 MHz Weather Sensor Radio Receiver based on CC1101 and ESP32/ESP8266 - provides data via secure MQTT**
+**Bresser 5-in-1 868 MHz Weather Sensor Radio Receiver based on CC1101 and ESP32/ESP8266 - provides data via MQTT, HTTP**
 
 Based on:
 - [Bresser5in1-CC1101](https://github.com/seaniefs/Bresser5in1-CC1101) by [Sean Siford](https://github.com/seaniefs)
@@ -18,7 +18,7 @@ Based on:
 * [BRESSER Weather Center 5-in-1](https://www.bresser.de/en/Weather-Time/Weather-Center/BRESSER-Weather-Center-5-in-1-black.html)
 * [BRESSER Professional WIFI colour Weather Center 5-in-1 V](https://www.bresser.de/en/Weather-Time/WLAN-Weather-Stations-Centers/BRESSER-Professional-WIFI-colour-Weather-Center-5-in-1-V.html)
 
-The Bresser 5-in-1 Weather Stations seem to use two different protocols. Select the appropriate decoder by (un-)commenting `#define BRESSER_6_IN_1` in the source code.
+The Bresser 5-in-1 Weather Stations seem to use two different protocols. In the original matthias-bs version, you could select the appropriate decoder by (un-)commenting `#define BRESSER_6_IN_1` in the source code. In this fork of matthias-bs code, however, support has been reduced to just the 5In1.
 
 | Model         | Decoder Function                |
 | ------------- | ------------------------------- |
@@ -35,14 +35,17 @@ MQTT publications:
      
 `<base_topic>/status`  "online"|"offline"|"dead"$
 
-$ via LWT
+Example messages
 
-`<base_topic>` is set by `#define HOSTNAME ...`
+`pi@raspberrypi:~ $ mosquitto_sub -t "bresserproxy/#" -v`
+`bresserproxy/radio {"rssi": -79.500000, "lqi": 17 }`
+`bresserproxy/data {"sensor_id": "F9","battery_ok":1,"temp_c":6.2,"humidity":98,"wind_gust":0.0,"wind_avg":0.0,"wind_dir":225.0,"rain":81.6}`
+`bresserproxy/data {"sensor_id": "F9","battery_ok":1,"temp_c":6.1,"humidity":98,"wind_gust":0.0,"wind_avg":0.0,"wind_dir":225.0,"rain":81.6}`
+`bresserproxy/data {"sensor_id": "F9","battery_ok":1,"temp_c":6.1,"humidity":98,"wind_gust":0.0,"wind_avg":0.0,"wind_dir":225.0,"rain":81.6}`
 
-`<base_topic>/data` JSON Example:
-```
-{"sensor_id":12345678,"ch":0,"battery_ok":true,"humidity":44,"wind_gust":1.2,"wind_avg":1.2,"wind_dir":150,"rain":146}
-```
+## HTTP
+
+The ESP serves a very simple text-based status page, e.g., http://192.168.0.100/
 
 ## Hardware 
 
