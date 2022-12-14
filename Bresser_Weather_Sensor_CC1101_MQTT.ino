@@ -13,7 +13,7 @@
 //    arduino-mqtt Joël Gähwiler (256dpi) (https://github.com/256dpi/arduino-mqtt)
 //    ArduinoJson by Benoit Blanchon (https://arduinojson.org)
 //
-// MQTT publications:               
+// MQTT publications:
 //     <base_topic>/data    sensor data as JSON string - see publishWeatherdata()
 //     <base_topic>/radio   CC1101 radion transceiver info as JSON string - see publishRadio()
 //     <base_topic>/status  "online"|"offline"|"dead"$
@@ -92,14 +92,14 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SECRET
-    const char ssid[] = "LumiNet";
-    const char pass[] = "Urw4yddd8tkZ";
+    const char ssid[] = "your-wifi-ssid";
+    const char pass[] = "your-wifi-passwd";
 
     #define MY_HOSTNAME "bresserproxy"
     #define MY_HTTP_PORT 80
 
-    const char MQTT_HOST[] = "192.168.0.185";
-    const int  MQTT_PORT   = 1883; // 8883 if net is WiFiClientSecure
+    const char MQTT_HOST[] = "192.168.0.185"; // destination for pushing MQTT
+    const int  MQTT_PORT   = 1883; // 1883 default, or 8883 if net is (disabled for now) WiFiClientSecure
     const char MQTT_USER[] = "";   // leave blank if no credentials used
     const char MQTT_PASS[] = "";   // leave blank if no credentials used
 #endif
@@ -233,7 +233,7 @@ void sync_ntp()
 // Set up MQTT
 //
 void mqtt_setup()
-{    
+{
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
     mqttClient.connect(MY_HOSTNAME);
 }
@@ -244,17 +244,17 @@ void mqtt_setup()
 bool cc1101_setup()
 {
     Serial.println(F("[CC1101] Initializing"));
-  
+
     // Initialization - starts with presence detection (chip version) and reset cmd
     //int state = radio.begin(868.35, 8.22, 57.136417, 270.0, 10, 32); // original
-    int state = radio.begin(868.3, 8.21, 57.136417, 270, 10, 32); // https://github.com/matthias-bs/BresserWeatherSensorReceiver/blob/main/src/WeatherSensor.cpp 
+    int state = radio.begin(868.3, 8.21, 57.136417, 270, 10, 32); // https://github.com/matthias-bs/BresserWeatherSensorReceiver/blob/main/src/WeatherSensor.cpp
     if (state != RADIOLIB_ERR_NONE) {
         Serial.printf("[CC1101] Error initialising: [%d]\n", state);
         return false;
     }
 
     // Set Tx power very low, we are not transmitting anyway
-    radio.setOutputPower(-30); 
+    radio.setOutputPower(-30);
 
     // Setup for passive Rx
     state = radio.setCrcFiltering(false);
@@ -268,7 +268,7 @@ bool cc1101_setup()
         return false;
     }
     // Preamble: AA AA AA AA AA
-    // Sync is: 2D D4 
+    // Sync is: 2D D4
     // Preamble 40 bits but the CC1101 doesn't allow us to set that
     // so we use a preamble of 32 bits and then use the sync as AA 2D
     // which then uses the last byte of the preamble - we recieve the last sync byte
@@ -284,7 +284,7 @@ bool cc1101_setup()
     state = radio.startReceive();
     if (state != RADIOLIB_ERR_NONE) {
         Serial.printf("[CC1101] Error with startReceive: [%d]\n", state);
-        return false;      
+        return false;
     }
 #endif
 
@@ -361,7 +361,7 @@ DecodeStatus decodeBresser5In1Payload(uint8_t *msg, uint8_t msgSize, WeatherData
             return DECODE_PAR_ERR;
         }
     }
-    
+
     // Verify checksum (number number bits set in bytes 14-25)
     uint8_t bitsSet = 0;
     uint8_t expectedBitsSet = msg[13];
@@ -396,7 +396,7 @@ DecodeStatus decodeBresser5In1Payload(uint8_t *msg, uint8_t msgSize, WeatherData
     wx->wind_gust_meter_sec = gust_raw * 0.1f;
     wx->wind_avg_meter_sec = wind_raw * 0.1f;
     wx->wind_ok = true;
-    
+
     int rain_raw = (msg[23] & 0x0f) + ((msg[23] & 0xf0) >> 4) * 10 + (msg[24] & 0x0f) * 100;
     wx->rain_mm = rain_raw * 0.1f;
     wx->rain_ok = true;
@@ -405,7 +405,7 @@ DecodeStatus decodeBresser5In1Payload(uint8_t *msg, uint8_t msgSize, WeatherData
 
     wx->valid = true;
     wx->timestamp = millis();
-    
+
     return DECODE_OK;
 }
 
@@ -437,7 +437,7 @@ void fakeWeatherdata(WeatherData_t *wx)
     wx->wind_gust_meter_sec = 44.4f;
     wx->wind_avg_meter_sec  = 11.1f;
     wx->rain_mm             = 9.9f;
-    
+
     wx->temp_ok     = true;
     wx->wind_ok     = true;
     wx->rain_ok     = true;
@@ -470,7 +470,7 @@ bool receiveRadioData(uint8_t *recvData)
     // Chip got any data yet?
     bool success = false;
     if (radio_Int_Flag) {
-      
+
         // Disable interrupt while processing
         radio_Int_ENA = false;
         radio_Int_Flag = false;
@@ -492,7 +492,7 @@ bool receiveRadioData(uint8_t *recvData)
         radio_Int_ENA = true;
     }
     return success;
-#endif    
+#endif
 }
 
 //
@@ -507,13 +507,13 @@ bool getWeatherdata(WeatherData_t *wx)
 
     // Check for radio data
     if (!receiveRadioData(recvData)) {
-        return false;      
+        return false;
     }
 
     #ifdef DEBUG_DUMP_C1101
     printRadioQuality();
     #endif
-    
+
     // Verify last syncword is 1st byte of payload (see above) before proceeding with decode
     if (recvData[0] != 0xD4) {
        Serial.printf("[CC1101] Unexpected first byte 0x%02X instead of 0xD4\n", recvData[0]);
@@ -559,7 +559,7 @@ void printWeatherdata(const WeatherData_t *wx)
     if (wx->rain_ok) {
         Serial.printf("Rain: [%6.1fmm] ", wx->rain_mm);
     } else {
-        Serial.printf("Rain: [-----.-mm] "); 
+        Serial.printf("Rain: [-----.-mm] ");
     }
 
     if (wx->moisture_ok) {
@@ -643,7 +643,7 @@ void http_handleRoot()
   msg += F("</head><title>Bresser 5-in-1</title>\n");
   msg += F("<body><div class=mid><center>");
   if (!wx->valid) {
-    msg += "No radio data received yet";    
+    msg += "No radio data received yet";
   } else {
     char fields[300];
     char *buf = fields;
@@ -703,8 +703,8 @@ void setup()
 //
 // Main Loop
 //
-void loop() 
-{    
+void loop()
+{
     const uint32_t currentMillis = millis();
 
     mqttClient.loop();
