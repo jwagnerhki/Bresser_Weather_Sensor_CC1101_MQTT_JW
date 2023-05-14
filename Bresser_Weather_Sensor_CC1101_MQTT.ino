@@ -643,7 +643,7 @@ void http_handleRoot()
   msg += F("</head><title>Bresser 5-in-1</title>\n");
   msg += F("<body><div class=mid><center>");
   if (!wx->valid) {
-    msg += "No radio data received yet";
+    msg += F("No radio data received yet<br>");    
   } else {
     char fields[300];
     char *buf = fields;
@@ -664,6 +664,13 @@ void http_handleRoot()
     }
     msg += fields;
   }
+
+  if (mqttClient.connected()) {
+    msg += F("&#x2713; MQTT\n"); // <unicode check mark> MQTT
+  } else {
+    msg += F("&#x2717; MQTT\n"); // <unicode cross mark> MQTT
+  }
+
   msg += F("</center></div></body></html>\n");
   httpServer.send(200, "text/html", msg);
 }
@@ -725,8 +732,9 @@ void loop()
     #endif
 
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.print(F("[WiFi] Disconnected, reconnecting."));
+        Serial.println(F("[WiFi] Disconnected, reconnecting."));
         WiFi.waitForConnectResult();
+        delay(500);
         if (WiFi.status()) {
            Serial.print(F("[WiFi] Reconnected and got IP "));
            Serial.println(WiFi.localIP());
@@ -736,7 +744,8 @@ void loop()
     }
 
     if (!mqttClient.connected()) {
-        Serial.print(F("[MQTT] Disconnected, reconnecting."));
+        Serial.println(F("[MQTT] Disconnected, reconnecting."));
+        delay(500);
         if (mqttClient.connect(MY_HOSTNAME)) {
             mqttClient.publish(MQTT_PUB_STATUS, "online");
             Serial.print(F("[MQTT] Connected."));
